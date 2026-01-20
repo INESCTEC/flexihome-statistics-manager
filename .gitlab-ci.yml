@@ -1,0 +1,388 @@
+# Order of the stages
+stages:
+  # - test
+  - build
+  - push
+  - deploy
+
+# test:
+#   # Use a base image with python already installed
+#   image: docker-registry.inesctec.pt/cpes/european-projects/interconnect/hems/hems-infrastructure/gitlab-ci-base-image:latest
+
+#   # Job only starts if manually triggered from the GitLab UI
+#   # when: manual
+
+#   stage: test
+#   # This tag forces GitLab CD/CI to use the Docker Runner
+#   # You might have to enable the Docker Runner on your repository (Settings -> CD/CI -> Runners -> Enable shared runners)
+#   tags:
+#     - docker
+#   # Environment variables
+  
+#   services:
+#   - docker:24.0.2-dind
+
+#   # In our case, only the POSTGRES_PASSWORD, POSTGRES_DB and DATABASE_IP were needed because the other are the default values in our configuration file (config.py)
+#   variables:
+#     # DOCKER_HOST: tcp://docker:2376
+#     DOCKER_TLS_CERTDIR: "/certs"
+  
+#     DOCKER_DRIVER: overlay2
+#     DOCKER_BUILDKIT: 1
+#     COMPOSE_DOCKER_CLI_BUILD: 1
+
+#     # Postgresql
+#     POSTGRES_USER: postgres
+#     POSTGRES_DB: statisticsmanager # Needed for PostgreSQL image
+#     POSTGRES_DB_ACCOUNT: account_manager
+#     # POSTGRES_MULTIPLE_DATABASES: '"devicemanager","account_manager"'
+    
+#     # Zookeeper + Kafka + Connect
+#     ZOOKEEPER_CONNECT: zookeeper:2181
+
+#     GROUP_ID: "1"
+#     CONFIG_STORAGE_TOPIC: my_connect_configs
+#     OFFSET_STORAGE_TOPIC: my_connect_offsets
+#     STATUS_STORAGE_TOPIC: my_connect_statuses
+#     BOOTSTRAP_SERVERS: kafka:9092
+
+#     # CONNECT_IP: connect
+
+#     # Account Manager Container
+#     DATABASE_IP: postgresql
+#     DATABASE_PORT: 5432
+#     DATABASE_USER: postgres
+#     KAFKA_BROKER_ENDPOINT: kafka:9092
+
+#     ACCOUNT_MANAGER_ENDPOINT: http://account-manager-test:8081/api/account
+#     DATABASE_IP_ACCOUNT: postgresql
+#     DATABASE_PORT_ACCOUNT: 5432
+#     DATABASE_USER_ACCOUNT: postgres
+#     DATABASE_PASSWORD_ACCOUNT: mysecretpassword
+#     GITLAB_CI_TEST: "True"
+#     TESTING: "True"
+
+#   before_script:
+#     # PREPARE ENVIRONMENT
+#     - docker version
+#     - docker compose version
+#     - docker info
+#     - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+
+#     - echo $GITLAB_DEPLOY_TOKEN
+#     - echo $GITLAB_DEPLOY_USERNAME
+#     - echo $GITLAB_SSA_MANAGER_DEPLOY_TOKEN
+
+#     # Add dependencies
+#     # - apk update
+#     # - apk --no-cache add --update curl gettext postgresql-client
+#     # - apk update
+#     # - apk upgrade
+#     # - apk --update add curl gettext postgresql-client python3 py3-pip py3-tox git postgresql-dev libpq libstdc++ libc6-compat gcompat g++ linux-headers libffi libffi-dev openblas blas lapack python3-dev
+
+#     - docker compose -f Docker-compose/docker-compose-test.yml down -v
+#     - docker compose -f Docker-compose/docker-compose-test.yml rm -v
+
+#   script:
+#     - tox --version
+
+#     # Start GA container
+#     # - docker compose -f Docker-compose/docker-compose-test.yml up -d ga
+
+#     # Start zookeeper container
+#     - docker compose -f Docker-compose/docker-compose-test.yml up -d zookeeper
+#     - sleep 10
+
+#     # - docker logs zookeeper
+#     - export ZOOKEEPER_CONNECT=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' zookeeper):2181
+#     - echo $ZOOKEEPER_CONNECT
+
+#     # Start Postgres database and remaining kafka stack
+#     - docker compose -f Docker-compose/docker-compose-test.yml up -d postgresql connect kafka
+#     - sleep 30
+#     # - docker logs connect
+#     # - docker logs postgresql
+
+
+#     # Configure services IP's manually from the docker network
+#     - export DATABASE_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' postgresql)
+#     - export DATABASE_IP_ACCOUNT=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' postgresql)
+#     - export BOOTSTRAP_SERVERS=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kafka):9092
+#     - export CONNECT_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' connect)
+
+#     - echo $DATABASE_IP
+#     - echo $DATABASE_IP_ACCOUNT
+#     - echo $BOOTSTRAP_SERVERS
+#     - echo $CONNECT_IP
+
+#     # setup postgres account manager database for testing
+#     - export PGPASSWORD=$POSTGRES_PASSWORD
+#     - |
+#       psql -h "$DATABASE_IP" --username "$POSTGRES_USER" -p "5432" <<-EOSQL
+#         CREATE DATABASE $POSTGRES_DB;
+#         CREATE DATABASE $POSTGRES_DB_ACCOUNT;
+#         CREATE DATABASE jwt_token_management;
+#       EOSQL
+#     # - |
+#     #   psql -h "$DATABASE_IP" --username "$POSTGRES_USER" -p "5432" -d "$POSTGRES_DB" <<-EOSQL
+#     #     CREATE DATABASE jwt_token_management;
+#     #   EOSQL
+#     # Debug databases status
+#     - psql -h "$DATABASE_IP" --username "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 'OK' AS status;"
+#     - psql -h "$DATABASE_IP" --username "$POSTGRES_USER" -d "$POSTGRES_DB_ACCOUNT" -c "SELECT 'OK' AS status;"
+#     - psql -h "$DATABASE_IP" --username "$POSTGRES_USER" -d "jwt_token_management" -c "SELECT 'OK' AS status;"
+
+
+#     # Register the Debezium Postgres Connectors
+#     # - envsubst "`printf '${%s} ' $(sh -c "env|cut -d'=' -f1")`" < Docker-compose/debezium-prod.json > Docker-compose/debezium_env.json # Replace env variables values
+#     # - envsubst "`printf '${%s} ' $(sh -c "env|cut -d'=' -f1")`" < Docker-compose/debezium-prod-account.json > Docker-compose/debezium_env_account.json # Replace env variables values
+
+#     # Connector data
+#     # - curl -i -X POST -H "Accept:application/json" -H "Content-Type:application/json" http://$CONNECT_IP:8083/connectors/ --data-binary "@Docker-compose/debezium_env.json"
+#     # - curl -i -X POST -H "Accept:application/json" -H "Content-Type:application/json" http://$CONNECT_IP:8083/connectors/ --data-binary "@Docker-compose/debezium_env_account.json"
+#     # - sleep 5
+#     # - docker logs --tail 50 connect
+#     # - curl -i -H "Accept:application/json" connect:8083/connectors/postgres-connector/status
+
+#     # Account Manager Service and Influx DB up
+#     - docker compose -f Docker-compose/docker-compose-test.yml up -d account-manager influx-db-service
+    
+#     - sleep 10
+#     # - docker logs account-manager-test
+    
+#     # Configure service IP manually
+#     - export ACCOUNT_MANAGER_ENDPOINT=http://$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' account-manager-test):8080/api/account
+#     - echo $ACCOUNT_MANAGER_ENDPOINT
+#     - export INFLUX_URL=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' influxdb)
+#     - echo $INFLUX_URL
+
+#     # Test connection to account-manager service
+#     - |
+#       curl -H "X-Correlation-ID: 5c70300e-9f45-4447-bd09-72f4ba3c8209" $ACCOUNT_MANAGER_ENDPOINT/user?user-ids=1234567892
+
+#     - docker container ls -a
+
+#     - tox -c tox-gitlab.ini
+
+  
+#   after_script:
+#     - export DATABASE_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' postgresql)
+#     - export PGPASSWORD=$POSTGRES_PASSWORD
+#     - |
+#       psql -h "$DATABASE_IP" --username "$POSTGRES_USER" -p "5432" -d "$POSTGRES_DB_ACCOUNT" <<-EOSQL
+#         SELECT * FROM users;
+#       EOSQL
+    
+#     - |
+#       psql -h "$DATABASE_IP" --username "$POSTGRES_USER" -p "5432" -d "$POSTGRES_DB_ACCOUNT" <<-EOSQL
+#         SELECT * FROM confirmation_tokens;
+#       EOSQL
+
+#     - |
+#       psql -h "$DATABASE_IP" --username "$POSTGRES_USER" -p "5432" -d "$POSTGRES_DB_ACCOUNT" <<-EOSQL
+#         SELECT * FROM events;
+#       EOSQL
+    
+#     - |
+#       psql -h "$DATABASE_IP" --username "$POSTGRES_USER" -p "5432" -d "$POSTGRES_DB_ACCOUNT" <<-EOSQL
+#         SELECT * FROM processed_events;
+#       EOSQL
+
+#     # - docker logs connect
+#     # - docker logs account-manager-test
+
+#     - docker compose -f Docker-compose/docker-compose-test.yml down -v
+#     - docker compose -f Docker-compose/docker-compose-test.yml rm -v
+
+build:
+  image: docker:24.0.2
+  stage: build
+  tags:
+    - docker
+  services:
+    - docker:24.0.2-dind
+  before_script:
+    - docker info # Print out docker version for debugging
+    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY # Login on the GitLab container registry
+
+  script:
+    # Echo the variables to appear in the logs
+    - echo CI_REGISTRY_IMAGE $CI_REGISTRY_IMAGE
+    - echo CI_COMMIT_REF_SLUG $CI_COMMIT_REF_SLUG
+    - echo CI_COMMIT_SHA $CI_COMMIT_SHA
+    - echo CI_COMMIT_REF_NAME $CI_COMMIT_REF_NAME
+    - echo CI_COMMIT_SHORT_SHA $CI_COMMIT_SHORT_SHA
+
+    # Build docker image
+    - docker build --network host
+        --build-arg GITLAB_DEPLOY_USERNAME=$GITLAB_DEPLOY_USERNAME
+        --build-arg GITLAB_DEPLOY_TOKEN=$GITLAB_DEPLOY_TOKEN
+        -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+
+    # Push the image to the registry (GitLab container registry)
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
+
+################### BUILD CRON JOB CONTAINERS ON CHANGE ###################
+
+build-jobs:
+  image: docker:20.10.17
+  stage: build
+  tags:
+    - docker
+  services:
+    - docker:20.10.17-dind
+  before_script:
+    - docker info # Print out docker version for debugging
+    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY # Login on the GitLab container registry
+
+  script:
+    # Build docker image
+    - docker build --network host -t $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:development jobs/forecast
+    - docker build --network host -f jobs/mock/dongle/Dockerfile.dongle -t $CI_REGISTRY_IMAGE/mock-dongle-data:development jobs/mock/dongle
+    - docker build --network host -f jobs/mock/dongle/Dockerfile.smart_meter -t $CI_REGISTRY_IMAGE/mock-smart-meter-data:development jobs/mock/dongle
+
+    # Push the image to the registry (GitLab container registry)
+    - docker push $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:development
+    - docker push $CI_REGISTRY_IMAGE/mock-dongle-data:development
+    - docker push $CI_REGISTRY_IMAGE/mock-smart-meter-data:development
+  
+  rules:
+    - changes: 
+      - jobs/**/*
+
+
+
+########################## PUSH AND RELEASE JOBS ##########################
+
+# Here, the goal is to tag the "master" branch as "latest"
+push-latest:
+  image: docker:24.0.2
+  stage: push
+  tags:
+    - docker
+  services:
+    - docker:24.0.2-dind
+  before_script:
+    - docker info # Print out docker version for debugging
+    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
+  only:
+    # Only "master" should be tagged "latest", not the other git branches
+    - master
+    - main
+  script:
+    # Because we have no guarantee that this job will be picked up by the same runner
+    # that built the image in the previous step, we pull it again locally
+    - docker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker pull $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:staging
+    - docker pull $CI_REGISTRY_IMAGE/mock-dongle-data:staging
+    - docker pull $CI_REGISTRY_IMAGE/mock-smart-meter-data:staging
+
+    # Then we tag it "latest"
+    - docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:latest
+    - docker tag $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:staging $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:latest
+    - docker tag $CI_REGISTRY_IMAGE/mock-dongle-data:staging $CI_REGISTRY_IMAGE/mock-dongle-data:latest
+    - docker tag $CI_REGISTRY_IMAGE/mock-smart-meter-data:staging $CI_REGISTRY_IMAGE/mock-smart-meter-data:latest
+
+    # Annnd we push it.
+    - docker push $CI_REGISTRY_IMAGE:latest
+    - docker push $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:latest
+    - docker push $CI_REGISTRY_IMAGE/mock-dongle-data:latest
+    - docker push $CI_REGISTRY_IMAGE/mock-smart-meter-data:latest
+
+# Push to staging or other branches
+push-secondary-branches:
+  image: docker:24.0.2
+  stage: push
+  tags:
+    - docker
+  services:
+    - docker:24.0.2-dind
+  before_script:
+    - docker info # Print out docker version for debugging
+    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
+  except:
+    # Only on "staging" branch
+    # - staging
+    - master
+    - main
+  script:
+    # Because we have no guarantee that this job will be picked up by the same runner
+    # that built the image in the previous step, we pull it again locally
+    - docker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker pull $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:development
+    - docker pull $CI_REGISTRY_IMAGE/mock-dongle-data:development
+    - docker pull $CI_REGISTRY_IMAGE/mock-smart-meter-data:development
+
+    # Then we tag it "staging"
+    - docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:$CI_COMMIT_BRANCH
+    - docker tag $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:development $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:$CI_COMMIT_BRANCH
+    - docker tag $CI_REGISTRY_IMAGE/mock-dongle-data:development $CI_REGISTRY_IMAGE/mock-dongle-data:$CI_COMMIT_BRANCH
+    - docker tag $CI_REGISTRY_IMAGE/mock-smart-meter-data:development $CI_REGISTRY_IMAGE/mock-smart-meter-data:$CI_COMMIT_BRANCH
+
+    # Annnd we push it.
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_BRANCH
+    - docker push $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:$CI_COMMIT_BRANCH
+    - docker push $CI_REGISTRY_IMAGE/mock-dongle-data:$CI_COMMIT_BRANCH
+    - docker push $CI_REGISTRY_IMAGE/mock-smart-meter-data:$CI_COMMIT_BRANCH
+
+# Push New tagged version to container registry (when manually tagged)
+push-tag:
+  image: docker:24.0.2
+  stage: push
+  tags:
+    - docker
+  services:
+    - docker:24.0.2-dind
+  rules:
+    - if: $CI_COMMIT_TAG
+  before_script:
+    - docker info # Print out docker version for debugging
+    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
+    - echo $CI_COMMIT_TAG
+  script:
+    # Pull commit tag
+    - docker pull $CI_REGISTRY_IMAGE:latest
+    - docker pull $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:latest
+    - docker pull $CI_REGISTRY_IMAGE/mock-dongle-data:latest
+    - docker pull $CI_REGISTRY_IMAGE/mock-smart-meter-data:latest
+    
+    # Then we tag it with tag label
+    - docker tag $CI_REGISTRY_IMAGE:latest $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+    - docker tag $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:latest $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:$CI_COMMIT_TAG
+    - docker tag $CI_REGISTRY_IMAGE/mock-dongle-data:latest $CI_REGISTRY_IMAGE/mock-dongle-data:$CI_COMMIT_TAG
+    - docker tag $CI_REGISTRY_IMAGE/mock-smart-meter-data:latest $CI_REGISTRY_IMAGE/mock-smart-meter-data:$CI_COMMIT_TAG
+    
+    # And we push it back to the registry.
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+    - docker push $CI_REGISTRY_IMAGE/input-dongle-raw-measurements:$CI_COMMIT_TAG
+    - docker push $CI_REGISTRY_IMAGE/mock-dongle-data:$CI_COMMIT_TAG
+    - docker push $CI_REGISTRY_IMAGE/mock-smart-meter-data:$CI_COMMIT_TAG
+
+mirror-to-github:
+  stage: deploy
+  image: docker
+  tags:
+    - docker
+  variables:
+    GIT_STRATEGY: clone
+  only:
+  - github-mirror
+  script:
+  - apk add --no-cache git
+  - cd $CI_PROJECT_DIR
+  - git checkout github-mirror
+  - LAST_COMMIT_MSG=$(git log --format=%B -n 1)
+  - LAST_COMMIT_NAME=$(git log -1 --pretty=format:'%an')
+  - LAST_COMMIT_EMAIL=$(git log -1 --pretty=format:'%ae')
+  - git clone https://oauth2:${GITHUB_TOKEN}@github.com/INESCTEC/flexihome-statistics-manager.git
+    github
+  - rm -rf .git
+  - mv github/.git .git
+  - rm -rf github
+  - git add -A
+  - git config user.email "$LAST_COMMIT_EMAIL"
+  - git config user.name "$LAST_COMMIT_NAME"
+  - git commit -m "$LAST_COMMIT_MSG"
+  - git push
+

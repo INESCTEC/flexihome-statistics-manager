@@ -1,0 +1,1 @@
+import statistics_manager_service.controllers.health_controller

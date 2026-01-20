@@ -1,0 +1,1163 @@
+openapi: 3.0.0
+
+info:
+  description: This is the Statistics Manager Service OpenAPI definition.
+    The Statistics Manager Service processes energy data in order to provide the user with
+    useful statistics (e.g. energy cost for the day, injection for the month, consumption
+    for the year, CO2 footprint).
+    The interactions here represented are based on this [Canvas](https://gitlab.inesctec.pt/cpes/european-projects/interconnect/hems/hems-documentation/-/blob/master/Microservices/Statistics-Manager-Service.adoc)
+
+  version: 0.1.1
+  title: Statistics Manager Service
+  contact:
+    name: Vasco Campos
+    email: vasco.m.campos@inesctec.pt
+
+servers:
+  - url: https://interconnect-dev.inesctec.pt/api/statistics
+
+tags:
+  - name: Energy Queries
+    description: Query the server for energy statistics of users.
+  - name: Power Queries
+    description: Query the server for power statistics of users.
+  - name: Voltage Queries
+    description: Query the server for voltage statistics of users.
+  - name: Event Producers
+    description: Endpoints to produce events that trigger the consumer into saving statistics in the Database
+  - name: CO2 Forecast
+    description: Endpoints related to CO2 intensity forecast
+
+paths:
+  ### Energy ###
+  /ecosignal-forecast:
+    description: Retrieve the CO2 intensity forecast for mix energy of country.
+    get:
+      summary: "Retrieve CO2 intensity forecast from sentinel for a single day"
+      operationId: co2_intensity_get
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ForecastDay"
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/CO2Forecast'
+                type: array
+          description: Success response The timestamp field is the first timestamp
+            of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+      tags:
+        - CO2 Forecast
+  
+  /energy-consumption:
+    description: Retrieve the energy consumption for several users.
+    get:
+      summary: Retrieve the energy consumption for several userssss.
+        The "group_by" variable is used to compute energy spent on that interval
+      tags:
+        - "Energy Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIds"
+        - $ref: "#/components/parameters/TimeGroupBy"
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+      responses:
+        200:
+          description: Success response
+            The timestamp field is the first timestamp of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EnergyMetrics"
+              # examples:
+              #   daily:
+              #     $ref: "#/components/examples/daily_energy"
+              #   hourly:
+              #     $ref: "#/components/examples/hourly_energy"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+  
+  /energy-consumption-last:
+    description: Retrieve the last value of the energy consumption for several users.
+    get:
+      summary: Retrieve the last value of the energy consumption for several users.
+      tags:
+        - "Energy Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIds"
+      responses:
+        200:
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstantEnergyMetric"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+  
+  /energy-injection:
+    description: Retrieve the energy injection for several users.
+    get:
+      summary: Retrieve the energy injection for several users.
+        The "group_by" variable is used to compute energy spent on that interval
+      tags:
+        - "Energy Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIds"
+        - $ref: "#/components/parameters/TimeGroupBy"
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+      responses:
+        200:
+          description: Success response
+            The timestamp field is the first timestamp of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EnergyMetrics"
+              # examples:
+              #   daily:
+              #     $ref: "#/components/examples/daily_energy"
+              #   hourly:
+              #     $ref: "#/components/examples/hourly_energy"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+  
+  /energy-injection-last:
+    description: Retrieve the last value of the energy injection for several users.
+    get:
+      summary: Retrieve the last value of the energy injection for several users.
+      tags:
+        - "Energy Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIds"
+      responses:
+        200:
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstantEnergyMetric"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+  
+  ### Power ###
+  /power-consumption:
+    description: Retrieve the power consumption for several users.
+    get:
+      summary: Retrieve the power consumption for several users.
+        The "group_by" variable is used to compute the average value between that interval
+      tags:
+        - "Power Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIds"
+        - $ref: "#/components/parameters/TimeGroupBy"
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+      responses:
+        200:
+          description: Success response
+            The timestamp field is the first timestamp of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PowerMetrics"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+  
+  /power-consumption-last:
+    description: Retrieve the last power value of the consumption for several users.
+    get:
+      summary: Retrieve the last power value of the consumption for several users.
+      tags:
+        - "Power Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIds"
+      responses:
+        200:
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstantPowerMetric"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+  
+  /power-injection:
+    description: Retrieve the power injection for several users.
+    get:
+      summary: Retrieve the power injection for several users.
+        The "group_by" variable is used to compute the average value between that interval
+      tags:
+        - "Power Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIds"
+        - $ref: "#/components/parameters/TimeGroupBy"
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+      responses:
+        200:
+          description: Success response
+            The timestamp field is the first timestamp of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PowerMetrics"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+  
+  /power-injection-last:
+    description: Retrieve the last power value of the injection for several users.
+    get:
+      summary: Retrieve the last power value of the injection for several users.
+      tags:
+        - "Power Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIds"
+      responses:
+        200:
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstantPowerMetric"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+
+
+  /voltage:
+    description: Retrieve the voltage values for several users.
+    get:
+      summary: Retrieve the voltage values for several users.
+        The "group_by" variable is used to compute the average value between that interval
+      tags:
+        - "Voltage Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIds"
+        - $ref: "#/components/parameters/TimeGroupBy"
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+      responses:
+        200:
+          description: Success response
+            The timestamp field is the first timestamp of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoltageMetrics"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+  
+  /voltage-last:
+    description: Retrieve the last voltage value for several users.
+    get:
+      summary: Retrieve the last voltage value for several users.
+      tags:
+        - "Voltage Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIds"
+      responses:
+        200:
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstantVoltageMetric"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+
+  /power-consumed-real:
+    description: Retrieve the real power consumption for the user that requested it.
+    get:
+      summary: Retrieve the real power consumption for the user whether he has api_key or meter_id.
+      tags:
+        - "Energy Consumed Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/TimeGroupBy"
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+      responses:
+        200:
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ForecastVsReal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+
+  /energy-consumed-forecast-vs-real:
+    description: Retrieve the energy consumption for several users.
+    get:
+      summary: List of user's forecasted energy consumption vs. real consumption
+      tags:
+        - "Energy Consumed Queries"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserIdsNotRequired"
+        - $ref: "#/components/parameters/TimeGroupBy"
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+      responses:
+        200:
+          description: Success response
+            The timestamp field is the first timestamp of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ForecastVsReal"
+              examples:
+                daily:
+                  $ref: "#/components/examples/forecast_vs_real_daily"
+                hourly:
+                  $ref: "#/components/examples/forecast_vs_real_hourly"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+
+  /trigger-computed-forecast-producer:
+    post:
+      summary: Trigger the service into saving a user's forecast data for a single day
+      tags:
+        - "Event Producers"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/ForecastDay"
+      responses:
+        200:
+          description: Success response. Events have been triggered
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+  
+  /mock-consumption-curve-producer:
+    post:
+      description: Mocks a user's <user_id> consumption curve for a single day <start_date>.
+        The curve consists of the energy consumption forecast and the real energy consumption.
+        The curve's interval between values is given by <delivery_time> minutes.
+      summary: Trigger the service into saving a mock consumption curve (forecast + real) for a user
+      tags:
+        - "Event Producers"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/DeliveryTimeMinutes"
+      responses:
+        200:
+          description: Success response. Event has been triggered
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+  
+  /users-get-real-data-producer:
+    post:
+      description: Produces a signal that triggers the service into saving a user's <user_id> real power consumption for a date interval.
+        <start_date> and <end_date> are expected to be in UTC.
+        The data retrieved is measured by the household smart meter + dongle (in case the household has one).
+        The service retrieves the dongle data from influxdb and the smart meter data from the DSO interface.
+      summary: Triggers the service into saving a user's real power consumption for a date interval
+      tags:
+        - "Event Producers"
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/StartDatetime"
+        - $ref: "#/components/parameters/EndDatetime"
+      responses:
+        200:
+          description: Success response. Event has been triggered
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/InvalidCredentials"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/UserIdNotFound"
+
+
+security:
+  - {}
+  - Bearer: []
+
+components:
+  securitySchemes:
+    Bearer: # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  headers:
+    CorrelationId:
+      required: true
+      schema:
+        $ref: "#/components/schemas/CorrelationId"
+
+  parameters:
+    CorrelationId:
+      in: header
+      name: X-Correlation-ID
+      required: true
+      schema:
+        $ref: "#/components/schemas/CorrelationId"
+
+    UserId:
+      in: query
+      name: user_id
+      required: true
+      schema:
+        $ref: "#/components/schemas/UserId"
+
+    UserIds:
+      in: query
+      name: user_ids
+      required: true
+      schema:
+        type: array
+        items:
+          $ref: "#/components/schemas/UserId"
+        example: [userId1, userId2]
+        minItems: 1
+    
+    UserIdsNotRequired:
+      in: query
+      name: user_ids
+      required: false
+      schema:
+        type: array
+        items:
+          $ref: "#/components/schemas/UserId"
+        example: [userId1, userId2]
+        minItems: 1
+
+    Authorization:
+      in: header
+      name: Authorization
+      schema:
+        $ref: "#/components/schemas/Authorization"
+
+    TimeGroupBy:
+      in: query
+      name: group_by
+      required: false
+      schema:
+        type: string
+        enum: [15_mins, hourly, daily, weekly, monthly]
+        example: daily
+        default: daily
+    
+    DeliveryTimeMinutes:
+      in: query
+      name: delivery_time
+      required: true
+      schema:
+        type: integer
+        minimum: 15
+        example: 60
+
+    StartDate:
+      in: query
+      name: start_date
+      required: true
+      schema:
+        $ref: "#/components/schemas/Timestamp"
+    
+    EndDate:
+      in: query
+      name: end_date
+      required: false
+      schema:
+        $ref: "#/components/schemas/Timestamp"
+
+    ForecastDay:
+      in: query
+      name: forecast_day
+      required: true
+      schema:
+        $ref: "#/components/schemas/Date"
+    
+    StartDatetime:
+      in: query
+      name: start_datetime
+      required: true
+      schema:
+        $ref: "#/components/schemas/Datetime"
+
+    EndDatetime:
+      in: query
+      name: end_datetime
+      required: false
+      schema:
+        $ref: "#/components/schemas/Datetime"
+
+  schemas:
+    CorrelationId:
+      type: string
+      format: uuid
+
+    UserId:
+      type: string
+      example: userId1
+      minLength: 10
+      maxLength: 10
+
+    Authorization:
+      type: string
+      format: byte # base64
+
+    Date:
+      type: string
+      format: date
+      example: "2023-01-20"
+    
+    Datetime:
+      type: string
+      format: datetime
+      example: "2023-01-20 00:00:00"
+    
+    Timestamp:
+      type: string
+      format: date-time
+      example: "2023-01-20T00:00:00Z"
+
+    EnergyUnits:
+      type: string
+      enum: [Wh, kWh]
+      example: kWh
+
+    EnergyValue:
+      type: number
+      format: float
+      minimum: 0
+      example: 12.5
+    
+    PowerUnits:
+      type: string
+      enum: [W, kW]
+      example: kW
+
+    PowerValue:
+      type: number
+      format: float
+      minimum: 0
+      example: 12.5
+
+    VoltageUnits:
+      type: string
+      enum: [V]
+      example: V
+
+    VoltageValue:
+      type: number
+      format: float
+      minimum: 0
+      example: 12.5
+
+    SlotNumber:
+      type: number
+      format: int64
+      minimum: 1
+      example: 2
+
+    CO2Units:
+      enum:
+      - gCO₂eq/kWh
+      - KgCO₂eq/KWh
+      example: gCO₂eq/kWh
+      title: CO2Units
+      type: string
+
+    ################################################################
+    ############################ ENERGY ############################
+    ################################################################
+
+    CO2Forecast:
+      description: CO2 value related to mostly recent forecast
+      example:
+        datetime: 2023-07-16T00:00:00Z
+        request: 2023-07-15T17:45:02Z
+        value: 175.06025393858152
+        unit: gCO₂eq/kWh
+        quality: 0
+        updated_at: 2023-07-15T17:56:01Z
+      properties:
+        datetime:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: datetime
+          type: string
+        request:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: request
+          type: string
+        value:
+          example: 12.5
+          format: float
+          minimum: 0
+          title: value
+          type: number
+        unit:
+          $ref: '#/components/schemas/CO2Units'
+        quality:
+          example: 0
+          format: int64
+          minimum: 0
+          title: slot_number
+          type: number
+        updated_at:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: updated_at
+          type: string
+      required:
+      - datetime
+      - request
+      - value
+      - unit
+      - quality
+      - updated_at
+      title: CO2Forecast
+      type: object
+
+    EnergyMetric:
+      type: object
+      description:
+        \"timestamp\" and \"slotNumber\" field are incremented by the query parameter \"timeInterval\"
+        value = grid_consumed_value + self_consumed_value
+        value = thermal_value + other_value
+      properties:
+        # Incrementa conforme o query parameter "timeInterval"
+        timestamp:
+          $ref: "#/components/schemas/Timestamp"
+        value:
+          $ref: "#/components/schemas/EnergyValue"
+        units:
+          $ref: "#/components/schemas/EnergyUnits"
+        slot_number:
+          $ref: "#/components/schemas/SlotNumber"
+      required:
+        - timestamp
+        - value
+        - units
+        - slot_number
+
+    EnergyMetrics:
+      type: object
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UserId"
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/EnergyMetric"
+      required:
+        - user_id
+        - metrics
+    
+    InstantEnergyMetric:
+      type: object
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UserId"
+        timestamp:
+          $ref: "#/components/schemas/Timestamp"
+        value:
+          $ref: "#/components/schemas/EnergyValue"
+        units:
+          $ref: "#/components/schemas/EnergyUnits"
+      required:
+        - user_id
+        - timestamp
+        - value
+        - units
+    
+    ################################################################
+    ############################ POWER ############################
+    ################################################################
+
+    PowerMetric:
+      type: object
+      description:
+        \"timestamp\" and \"slotNumber\" field are incremented by the query parameter \"timeInterval\"
+        value = grid_consumed_value + self_consumed_value
+        value = thermal_value + other_value
+      properties:
+        # Incrementa conforme o query parameter "timeInterval"
+        timestamp:
+          $ref: "#/components/schemas/Timestamp"
+        value:
+          $ref: "#/components/schemas/PowerValue"
+        units:
+          $ref: "#/components/schemas/PowerUnits"
+        slot_number:
+          $ref: "#/components/schemas/SlotNumber"
+      required:
+        - timestamp
+        - value
+        - units
+        - slot_number
+
+    PowerMetrics:
+      type: object
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UserId"
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/PowerMetric"
+      required:
+        - user_id
+        - metrics
+    
+    InstantPowerMetric:
+      type: object
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UserId"
+        timestamp:
+          $ref: "#/components/schemas/Timestamp"
+        value:
+          $ref: "#/components/schemas/PowerValue"
+        units:
+          $ref: "#/components/schemas/PowerUnits"
+      required:
+        - user_id
+        - timestamp
+        - value
+        - units
+    
+
+    ################################################################
+    ############################ VOLTAGE ###########################
+    ################################################################
+
+    VoltageMetric:
+      type: object
+      description:
+        \"timestamp\" and \"slotNumber\" field are incremented by the query parameter \"timeInterval\"
+      properties:
+        # Incrementa conforme o query parameter "timeInterval"
+        timestamp:
+          $ref: "#/components/schemas/Timestamp"
+        value:
+          $ref: "#/components/schemas/VoltageValue"
+        units:
+          $ref: "#/components/schemas/VoltageUnits"
+        slot_number:
+          $ref: "#/components/schemas/SlotNumber"
+      required:
+        - timestamp
+        - value
+        - units
+        - slot_number
+
+    VoltageMetrics:
+      type: object
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UserId"
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/VoltageMetric"
+      required:
+        - user_id
+        - metrics
+    
+    InstantVoltageMetric:
+      type: object
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UserId"
+        timestamp:
+          $ref: "#/components/schemas/Timestamp"
+        value:
+          $ref: "#/components/schemas/VoltageValue"
+        units:
+          $ref: "#/components/schemas/VoltageUnits"
+      required:
+        - user_id
+        - timestamp
+        - value
+        - units
+    
+
+    ######################################################################
+    ################ ENERGY-COMSUMPTION-FORECAST-VS-REAL #################
+    ######################################################################
+
+    EnergyTimeSeries:
+      type: object
+      description: 
+        Array of energy consumption metrics grouped by <group_by>.
+        The real energy consumption, measured by houses with dongles
+      properties:
+        timestamp:
+          $ref: "#/components/schemas/Timestamp"
+        energy:
+          $ref: "#/components/schemas/EnergyValue"
+        units:
+          $ref: "#/components/schemas/EnergyUnits"
+        slot_number:
+          $ref: "#/components/schemas/SlotNumber"
+      # required:
+      #   - timestamp
+      #   - energy
+      #   - units
+      #   - slot_number    
+
+    ForecastVsReal:
+      type: object
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UserId"
+        forecast:
+          type: array
+          items:
+            $ref: "#/components/schemas/EnergyTimeSeries"
+        real:
+          type: array
+          items:
+            $ref: "#/components/schemas/EnergyTimeSeries"
+      required:
+        - user_id
+        - real
+
+        
+    Error:
+      description: Error model
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      headers:
+        X-Correlation-ID:
+          $ref: "#/components/headers/CorrelationId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            Timestamp error:
+              value:
+                error: "Reason for bad request error"
+            Missing X-Correlation-ID header:
+              value:
+                error: "missing X-Correlation-ID header"
+
+    InvalidCredentials:
+      description: Unauthenticated or invalid credentials
+      headers:
+        X-Correlation-ID:
+          $ref: "#/components/headers/CorrelationId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            Unauthenticated:
+              value:
+                error: "error in authorization token"
+
+    Forbidden:
+      description: Forbidden to access the information requested
+      headers:
+        X-Correlation-ID:
+          $ref: "#/components/headers/CorrelationId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            Forbidden:
+              value:
+                error: "you are not authorized to access this information"
+
+    UserIdNotFound:
+      description: User id not found
+      headers:
+        X-Correlation-ID:
+          $ref: "#/components/headers/CorrelationId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            User Id not found:
+              value:
+                error: 'user with id "userId" not found'
+
+
+  examples:
+    daily_energy:
+      value:
+        - user_id: "z922w5ye4p"
+          metrics:
+          - value: 250.230000003
+            units: "kWh"
+            slot_number: 1
+            timestamp: "2022-03-01T00:00:00Z"
+          - value: 321.102000002
+            units: "kWh"
+            slot_number: 2
+            timestamp: "2022-03-02T00:00:00Z"
+    
+    hourly_energy:
+      value:
+        - user_id: "z922w5ye4p"
+          metrics:
+          - value: 10.230000003
+            units: "kWh"
+            slot_number: 1
+            timestamp: "2022-03-01T08:00:00Z"
+          - value: 120.102000002
+            units: "kWh"
+            slot_number: 2
+            timestamp: "2022-03-01T09:00:00Z"
+    
+
+    forecast_vs_real_daily:
+      value:
+        - user_id: "z922w5ye4p"
+          forecast:
+          - energy: 250.23
+            units: "kW"
+            slot_number: 1
+            timestamp: "2022-03-01T00:00:00Z"
+          - energy: 321.10
+            units: "kW"
+            slot_number: 2
+            timestamp: "2022-03-02T00:00:00Z"
+          real:
+          - energy: 270.23
+            units: "kW"
+            slot_number: 1
+            timestamp: "2022-03-01T00:00:00Z"
+          - energy: 350.10
+            units: "kW"
+            slot_number: 2
+            timestamp: "2022-03-02T00:00:00Z"
+    
+    forecast_vs_real_hourly:
+      value:
+        - user_id: "z922w5ye4p"
+          forecast:
+          - generated_value: 10.23
+            units: "kW"
+            slot_number: 1
+            timestamp: "2022-03-01T08:00:00Z"
+          - consumed_value: 120.10
+            units: "kW"
+            slot_number: 2
+            timestamp: "2022-03-01T09:00:00Z"
+          real:
+          - generated_value: 7.82
+            units: "kW"
+            slot_number: 1
+            timestamp: "2022-03-01T08:00:00Z"
+          - consumed_value: 102.37
+            units: "kW"
+            slot_number: 2
+            timestamp: "2022-03-01T09:00:00Z"
+            

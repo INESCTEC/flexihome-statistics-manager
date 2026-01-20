@@ -1,0 +1,6 @@
+*.svg
+*.drawio
+
+__pycache__
+
+hems_group_project_count.py

@@ -1,0 +1,2656 @@
+openapi: 3.0.0
+info:
+  contact:
+    email: vasco.m.campos@inesctec.pt
+    name: Vasco Campos
+  description: "This is the Statistics Manager Service OpenAPI definition. The Statistics\
+    \ Manager Service processes energy data in order to provide the user with useful\
+    \ statistics (e.g. energy cost for the day, injection for the month, consumption\
+    \ for the year, CO2 footprint). The interactions here represented are based on\
+    \ this [Canvas](https://gitlab.inesctec.pt/cpes/european-projects/interconnect/hems/hems-documentation/-/blob/master/Microservices/Statistics-Manager-Service.adoc)"
+  title: Statistics Manager Service
+  version: 0.1.1
+servers:
+- url: https://interconnect-dev.inesctec.pt/api/statistics
+security:
+- {}
+- Bearer: []
+tags:
+- description: Query the server for energy statistics of users.
+  name: Energy Queries
+- description: Query the server for power statistics of users.
+  name: Power Queries
+- description: Query the server for voltage statistics of users.
+  name: Voltage Queries
+- description: Endpoints to produce events that trigger the consumer into saving statistics
+    in the Database
+  name: Event Producers
+- description: Endpoints related to CO2 intensity forecast
+  name: CO2 Forecast
+paths:
+  /ecosignal-forecast:
+    description: Retrieve the CO2 intensity forecast for mix energy of country.
+    get:
+      operationId: co2_intensity_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: forecast_day
+        required: true
+        schema:
+          $ref: '#/components/schemas/Date'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/CO2Forecast'
+                type: array
+          description: Success response The timestamp field is the first timestamp
+            of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve CO2 intensity forecast from sentinel for a single day
+      tags:
+      - CO2 Forecast
+      x-openapi-router-controller: statistics_manager_service.controllers.co2_forecast_controller
+  /energy-consumed-forecast-vs-real:
+    description: Retrieve the energy consumption for several users.
+    get:
+      operationId: energy_consumed_forecast_vs_real_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: false
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      - explode: true
+        in: query
+        name: group_by
+        required: false
+        schema:
+          default: daily
+          enum:
+          - 15_mins
+          - hourly
+          - daily
+          - weekly
+          - monthly
+          example: daily
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: start_date
+        required: true
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      - explode: true
+        in: query
+        name: end_date
+        required: false
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                daily:
+                  $ref: '#/components/examples/forecast_vs_real_daily'
+                hourly:
+                  $ref: '#/components/examples/forecast_vs_real_hourly'
+              schema:
+                items:
+                  $ref: '#/components/schemas/ForecastVsReal'
+                type: array
+          description: Success response The timestamp field is the first timestamp
+            of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: List of user's forecasted energy consumption vs. real consumption
+      tags:
+      - Energy Consumed Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.energy_consumed_queries_controller
+  /energy-consumption:
+    description: Retrieve the energy consumption for several users.
+    get:
+      operationId: energy_consumption_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: true
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      - explode: true
+        in: query
+        name: group_by
+        required: false
+        schema:
+          default: daily
+          enum:
+          - 15_mins
+          - hourly
+          - daily
+          - weekly
+          - monthly
+          example: daily
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: start_date
+        required: true
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      - explode: true
+        in: query
+        name: end_date
+        required: false
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/EnergyMetrics'
+                type: array
+          description: Success response The timestamp field is the first timestamp
+            of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the energy consumption for several userssss. The "group_by"
+        variable is used to compute energy spent on that interval
+      tags:
+      - Energy Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.energy_queries_controller
+  /energy-consumption-last:
+    description: Retrieve the last value of the energy consumption for several users.
+    get:
+      operationId: energy_consumption_last_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: true
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/InstantEnergyMetric'
+                type: array
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the last value of the energy consumption for several users.
+      tags:
+      - Energy Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.energy_queries_controller
+  /energy-injection:
+    description: Retrieve the energy injection for several users.
+    get:
+      operationId: energy_injection_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: true
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      - explode: true
+        in: query
+        name: group_by
+        required: false
+        schema:
+          default: daily
+          enum:
+          - 15_mins
+          - hourly
+          - daily
+          - weekly
+          - monthly
+          example: daily
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: start_date
+        required: true
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      - explode: true
+        in: query
+        name: end_date
+        required: false
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/EnergyMetrics'
+                type: array
+          description: Success response The timestamp field is the first timestamp
+            of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the energy injection for several users. The "group_by" variable
+        is used to compute energy spent on that interval
+      tags:
+      - Energy Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.energy_queries_controller
+  /energy-injection-last:
+    description: Retrieve the last value of the energy injection for several users.
+    get:
+      operationId: energy_injection_last_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: true
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/InstantEnergyMetric'
+                type: array
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the last value of the energy injection for several users.
+      tags:
+      - Energy Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.energy_queries_controller
+  /mock-consumption-curve-producer:
+    post:
+      description: Mocks a user's <user_id> consumption curve for a single day <start_date>.
+        The curve consists of the energy consumption forecast and the real energy
+        consumption. The curve's interval between values is given by <delivery_time>
+        minutes.
+      operationId: mock_consumption_curve_producer_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_id
+        required: true
+        schema:
+          $ref: '#/components/schemas/UserId'
+        style: form
+      - explode: true
+        in: query
+        name: start_date
+        required: true
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      - explode: true
+        in: query
+        name: delivery_time
+        required: true
+        schema:
+          example: 60
+          minimum: 15
+          type: integer
+        style: form
+      responses:
+        "200":
+          description: Success response. Event has been triggered
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Trigger the service into saving a mock consumption curve (forecast
+        + real) for a user
+      tags:
+      - Event Producers
+      x-openapi-router-controller: statistics_manager_service.controllers.event_producers_controller
+  /power-consumed-real:
+    description: Retrieve the real power consumption for the user that requested it.
+    get:
+      operationId: power_consumed_real_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_id
+        required: true
+        schema:
+          $ref: '#/components/schemas/UserId'
+        style: form
+      - explode: true
+        in: query
+        name: group_by
+        required: false
+        schema:
+          default: daily
+          enum:
+          - 15_mins
+          - hourly
+          - daily
+          - weekly
+          - monthly
+          example: daily
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: start_date
+        required: true
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      - explode: true
+        in: query
+        name: end_date
+        required: false
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ForecastVsReal'
+                type: array
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the real power consumption for the user whether he has api_key
+        or meter_id.
+      tags:
+      - Energy Consumed Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.energy_consumed_queries_controller
+  /power-consumption:
+    description: Retrieve the power consumption for several users.
+    get:
+      operationId: power_consumption_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: true
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      - explode: true
+        in: query
+        name: group_by
+        required: false
+        schema:
+          default: daily
+          enum:
+          - 15_mins
+          - hourly
+          - daily
+          - weekly
+          - monthly
+          example: daily
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: start_date
+        required: true
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      - explode: true
+        in: query
+        name: end_date
+        required: false
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PowerMetrics'
+                type: array
+          description: Success response The timestamp field is the first timestamp
+            of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the power consumption for several users. The "group_by" variable
+        is used to compute the average value between that interval
+      tags:
+      - Power Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.power_queries_controller
+  /power-consumption-last:
+    description: Retrieve the last power value of the consumption for several users.
+    get:
+      operationId: power_consumption_last_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: true
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/InstantPowerMetric'
+                type: array
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the last power value of the consumption for several users.
+      tags:
+      - Power Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.power_queries_controller
+  /power-injection:
+    description: Retrieve the power injection for several users.
+    get:
+      operationId: power_injection_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: true
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      - explode: true
+        in: query
+        name: group_by
+        required: false
+        schema:
+          default: daily
+          enum:
+          - 15_mins
+          - hourly
+          - daily
+          - weekly
+          - monthly
+          example: daily
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: start_date
+        required: true
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      - explode: true
+        in: query
+        name: end_date
+        required: false
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PowerMetrics'
+                type: array
+          description: Success response The timestamp field is the first timestamp
+            of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the power injection for several users. The "group_by" variable
+        is used to compute the average value between that interval
+      tags:
+      - Power Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.power_queries_controller
+  /power-injection-last:
+    description: Retrieve the last power value of the injection for several users.
+    get:
+      operationId: power_injection_last_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: true
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/InstantPowerMetric'
+                type: array
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the last power value of the injection for several users.
+      tags:
+      - Power Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.power_queries_controller
+  /trigger-computed-forecast-producer:
+    post:
+      operationId: trigger_computed_forecast_producer_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_id
+        required: true
+        schema:
+          $ref: '#/components/schemas/UserId'
+        style: form
+      - explode: true
+        in: query
+        name: forecast_day
+        required: true
+        schema:
+          $ref: '#/components/schemas/Date'
+        style: form
+      responses:
+        "200":
+          description: Success response. Events have been triggered
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Trigger the service into saving a user's forecast data for a single
+        day
+      tags:
+      - Event Producers
+      x-openapi-router-controller: statistics_manager_service.controllers.event_producers_controller
+  /users-get-real-data-producer:
+    post:
+      description: Produces a signal that triggers the service into saving a user's
+        <user_id> real power consumption for a date interval. <start_date> and <end_date>
+        are expected to be in UTC. The data retrieved is measured by the household
+        smart meter + dongle (in case the household has one). The service retrieves
+        the dongle data from influxdb and the smart meter data from the DSO interface.
+      operationId: users_get_real_data_producer_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_id
+        required: true
+        schema:
+          $ref: '#/components/schemas/UserId'
+        style: form
+      - explode: true
+        in: query
+        name: start_datetime
+        required: true
+        schema:
+          $ref: '#/components/schemas/Datetime'
+        style: form
+      - explode: true
+        in: query
+        name: end_datetime
+        required: false
+        schema:
+          $ref: '#/components/schemas/Datetime'
+        style: form
+      responses:
+        "200":
+          description: Success response. Event has been triggered
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Triggers the service into saving a user's real power consumption for
+        a date interval
+      tags:
+      - Event Producers
+      x-openapi-router-controller: statistics_manager_service.controllers.event_producers_controller
+  /voltage:
+    description: Retrieve the voltage values for several users.
+    get:
+      operationId: voltage_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: true
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      - explode: true
+        in: query
+        name: group_by
+        required: false
+        schema:
+          default: daily
+          enum:
+          - 15_mins
+          - hourly
+          - daily
+          - weekly
+          - monthly
+          example: daily
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: start_date
+        required: true
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      - explode: true
+        in: query
+        name: end_date
+        required: false
+        schema:
+          $ref: '#/components/schemas/Timestamp'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/VoltageMetrics'
+                type: array
+          description: Success response The timestamp field is the first timestamp
+            of the returned values.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the voltage values for several users. The "group_by" variable
+        is used to compute the average value between that interval
+      tags:
+      - Voltage Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.voltage_queries_controller
+  /voltage-last:
+    description: Retrieve the last voltage value for several users.
+    get:
+      operationId: voltage_last_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Correlation-ID
+        required: true
+        schema:
+          $ref: '#/components/schemas/CorrelationId'
+        style: simple
+      - explode: false
+        in: header
+        name: Authorization
+        required: false
+        schema:
+          $ref: '#/components/schemas/Authorization'
+        style: simple
+      - explode: true
+        in: query
+        name: user_ids
+        required: true
+        schema:
+          example:
+          - userId1
+          - userId2
+          items:
+            $ref: '#/components/schemas/UserId'
+          minItems: 1
+          type: array
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/InstantVoltageMetric'
+                type: array
+          description: Success response
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "400":
+          content:
+            application/json:
+              examples:
+                Timestamp error:
+                  value:
+                    error: Reason for bad request error
+                Missing X-Correlation-ID header:
+                  value:
+                    error: missing X-Correlation-ID header
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "401":
+          content:
+            application/json:
+              examples:
+                Unauthenticated:
+                  value:
+                    error: error in authorization token
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthenticated or invalid credentials
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "403":
+          content:
+            application/json:
+              examples:
+                Forbidden:
+                  value:
+                    error: you are not authorized to access this information
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden to access the information requested
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        "404":
+          content:
+            application/json:
+              examples:
+                User Id not found:
+                  value:
+                    error: user with id "userId" not found
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User id not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+      summary: Retrieve the last voltage value for several users.
+      tags:
+      - Voltage Queries
+      x-openapi-router-controller: statistics_manager_service.controllers.voltage_queries_controller
+components:
+  examples:
+    daily_energy:
+      value:
+      - user_id: z922w5ye4p
+        metrics:
+        - value: 250.230000003
+          units: kWh
+          slot_number: 1
+          timestamp: 2022-03-01T00:00:00Z
+        - value: 321.102000002
+          units: kWh
+          slot_number: 2
+          timestamp: 2022-03-02T00:00:00Z
+    hourly_energy:
+      value:
+      - user_id: z922w5ye4p
+        metrics:
+        - value: 10.230000003
+          units: kWh
+          slot_number: 1
+          timestamp: 2022-03-01T08:00:00Z
+        - value: 120.102000002
+          units: kWh
+          slot_number: 2
+          timestamp: 2022-03-01T09:00:00Z
+    forecast_vs_real_daily:
+      value:
+      - user_id: z922w5ye4p
+        forecast:
+        - energy: 250.23
+          units: kW
+          slot_number: 1
+          timestamp: 2022-03-01T00:00:00Z
+        - energy: 321.1
+          units: kW
+          slot_number: 2
+          timestamp: 2022-03-02T00:00:00Z
+        real:
+        - energy: 270.23
+          units: kW
+          slot_number: 1
+          timestamp: 2022-03-01T00:00:00Z
+        - energy: 350.1
+          units: kW
+          slot_number: 2
+          timestamp: 2022-03-02T00:00:00Z
+    forecast_vs_real_hourly:
+      value:
+      - user_id: z922w5ye4p
+        forecast:
+        - generated_value: 10.23
+          units: kW
+          slot_number: 1
+          timestamp: 2022-03-01T08:00:00Z
+        - consumed_value: 120.1
+          units: kW
+          slot_number: 2
+          timestamp: 2022-03-01T09:00:00Z
+        real:
+        - generated_value: 7.82
+          units: kW
+          slot_number: 1
+          timestamp: 2022-03-01T08:00:00Z
+        - consumed_value: 102.37
+          units: kW
+          slot_number: 2
+          timestamp: 2022-03-01T09:00:00Z
+  headers:
+    CorrelationId:
+      explode: false
+      required: true
+      schema:
+        $ref: '#/components/schemas/CorrelationId'
+      style: simple
+  parameters:
+    CorrelationId:
+      explode: false
+      in: header
+      name: X-Correlation-ID
+      required: true
+      schema:
+        $ref: '#/components/schemas/CorrelationId'
+      style: simple
+    UserId:
+      explode: true
+      in: query
+      name: user_id
+      required: true
+      schema:
+        $ref: '#/components/schemas/UserId'
+      style: form
+    UserIds:
+      explode: true
+      in: query
+      name: user_ids
+      required: true
+      schema:
+        example:
+        - userId1
+        - userId2
+        items:
+          $ref: '#/components/schemas/UserId'
+        minItems: 1
+        type: array
+      style: form
+    UserIdsNotRequired:
+      explode: true
+      in: query
+      name: user_ids
+      required: false
+      schema:
+        example:
+        - userId1
+        - userId2
+        items:
+          $ref: '#/components/schemas/UserId'
+        minItems: 1
+        type: array
+      style: form
+    Authorization:
+      explode: false
+      in: header
+      name: Authorization
+      required: false
+      schema:
+        $ref: '#/components/schemas/Authorization'
+      style: simple
+    TimeGroupBy:
+      explode: true
+      in: query
+      name: group_by
+      required: false
+      schema:
+        default: daily
+        enum:
+        - 15_mins
+        - hourly
+        - daily
+        - weekly
+        - monthly
+        example: daily
+        type: string
+      style: form
+    DeliveryTimeMinutes:
+      explode: true
+      in: query
+      name: delivery_time
+      required: true
+      schema:
+        example: 60
+        minimum: 15
+        type: integer
+      style: form
+    StartDate:
+      explode: true
+      in: query
+      name: start_date
+      required: true
+      schema:
+        $ref: '#/components/schemas/Timestamp'
+      style: form
+    EndDate:
+      explode: true
+      in: query
+      name: end_date
+      required: false
+      schema:
+        $ref: '#/components/schemas/Timestamp'
+      style: form
+    ForecastDay:
+      explode: true
+      in: query
+      name: forecast_day
+      required: true
+      schema:
+        $ref: '#/components/schemas/Date'
+      style: form
+    StartDatetime:
+      explode: true
+      in: query
+      name: start_datetime
+      required: true
+      schema:
+        $ref: '#/components/schemas/Datetime'
+      style: form
+    EndDatetime:
+      explode: true
+      in: query
+      name: end_datetime
+      required: false
+      schema:
+        $ref: '#/components/schemas/Datetime'
+      style: form
+  responses:
+    BadRequest:
+      content:
+        application/json:
+          examples:
+            Timestamp error:
+              value:
+                error: Reason for bad request error
+            Missing X-Correlation-ID header:
+              value:
+                error: missing X-Correlation-ID header
+          schema:
+            $ref: '#/components/schemas/Error'
+      description: Bad Request
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+    InvalidCredentials:
+      content:
+        application/json:
+          examples:
+            Unauthenticated:
+              value:
+                error: error in authorization token
+          schema:
+            $ref: '#/components/schemas/Error'
+      description: Unauthenticated or invalid credentials
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+    Forbidden:
+      content:
+        application/json:
+          examples:
+            Forbidden:
+              value:
+                error: you are not authorized to access this information
+          schema:
+            $ref: '#/components/schemas/Error'
+      description: Forbidden to access the information requested
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+    UserIdNotFound:
+      content:
+        application/json:
+          examples:
+            User Id not found:
+              value:
+                error: user with id "userId" not found
+          schema:
+            $ref: '#/components/schemas/Error'
+      description: User id not found
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+  schemas:
+    CorrelationId:
+      format: uuid
+      type: string
+    UserId:
+      example: userId1
+      maxLength: 10
+      minLength: 10
+      title: user_id
+      type: string
+    Authorization:
+      format: byte
+      type: string
+    Date:
+      example: 2023-01-20
+      format: date
+      type: string
+    Datetime:
+      example: 2023-01-20 00:00:00
+      format: datetime
+      type: string
+    Timestamp:
+      example: 2023-01-20T00:00:00Z
+      format: date-time
+      title: timestamp
+      type: string
+    EnergyUnits:
+      enum:
+      - Wh
+      - kWh
+      example: kWh
+      title: EnergyUnits
+      type: string
+    EnergyValue:
+      example: 12.5
+      format: float
+      minimum: 0
+      title: value
+      type: number
+    PowerUnits:
+      enum:
+      - W
+      - kW
+      example: kW
+      title: PowerUnits
+      type: string
+    PowerValue:
+      example: 12.5
+      format: float
+      minimum: 0
+      title: value
+      type: number
+    VoltageUnits:
+      enum:
+      - V
+      example: V
+      title: VoltageUnits
+      type: string
+    VoltageValue:
+      example: 12.5
+      format: float
+      minimum: 0
+      title: value
+      type: number
+    SlotNumber:
+      example: 2
+      format: int64
+      minimum: 1
+      title: slot_number
+      type: number
+    CO2Units:
+      enum:
+      - gCO₂eq/kWh
+      - KgCO₂eq/KWh
+      example: gCO₂eq/kWh
+      title: CO2Units
+      type: string
+    CO2Forecast:
+      description: CO2 value related to mostly recent forecast
+      example:
+        datetime: 2023-07-16T00:00:00Z
+        request: 2023-07-15T17:45:02Z
+        value: 175.06025393858152
+        unit: gCO₂eq/kWh
+        quality: 0
+        updated_at: 2023-07-15T17:56:01Z
+      properties:
+        datetime:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: datetime
+          type: string
+        request:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: request
+          type: string
+        value:
+          example: 12.5
+          format: float
+          minimum: 0
+          title: value
+          type: number
+        unit:
+          $ref: '#/components/schemas/CO2Units'
+        quality:
+          example: 0
+          format: int64
+          minimum: 0
+          title: slot_number
+          type: number
+        updated_at:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: updated_at
+          type: string
+      required:
+      - datetime
+      - quality
+      - request
+      - unit
+      - updated_at
+      - value
+      title: CO2Forecast
+      type: object
+    EnergyMetric:
+      description: \"timestamp\" and \"slotNumber\" field are incremented by the query
+        parameter \"timeInterval\" value = grid_consumed_value + self_consumed_value
+        value = thermal_value + other_value
+      example:
+        units: kWh
+        value: 12.5
+        timestamp: 2023-01-20T00:00:00Z
+        slot_number: 2
+      properties:
+        timestamp:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: timestamp
+          type: string
+        value:
+          example: 12.5
+          format: float
+          minimum: 0
+          title: value
+          type: number
+        units:
+          $ref: '#/components/schemas/EnergyUnits'
+        slot_number:
+          example: 2
+          format: int64
+          minimum: 1
+          title: slot_number
+          type: number
+      required:
+      - slot_number
+      - timestamp
+      - units
+      - value
+      title: EnergyMetric
+      type: object
+    EnergyMetrics:
+      example:
+        user_id: userId1
+        metrics:
+        - units: kWh
+          value: 12.5
+          timestamp: 2023-01-20T00:00:00Z
+          slot_number: 2
+        - units: kWh
+          value: 12.5
+          timestamp: 2023-01-20T00:00:00Z
+          slot_number: 2
+      properties:
+        user_id:
+          example: userId1
+          maxLength: 10
+          minLength: 10
+          title: user_id
+          type: string
+        metrics:
+          items:
+            $ref: '#/components/schemas/EnergyMetric'
+          title: metrics
+          type: array
+      required:
+      - metrics
+      - user_id
+      title: EnergyMetrics
+      type: object
+    InstantEnergyMetric:
+      example:
+        user_id: userId1
+        units: kWh
+        value: 12.5
+        timestamp: 2023-01-20T00:00:00Z
+      properties:
+        user_id:
+          example: userId1
+          maxLength: 10
+          minLength: 10
+          title: user_id
+          type: string
+        timestamp:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: timestamp
+          type: string
+        value:
+          example: 12.5
+          format: float
+          minimum: 0
+          title: value
+          type: number
+        units:
+          $ref: '#/components/schemas/EnergyUnits'
+      required:
+      - timestamp
+      - units
+      - user_id
+      - value
+      title: InstantEnergyMetric
+      type: object
+    PowerMetric:
+      description: \"timestamp\" and \"slotNumber\" field are incremented by the query
+        parameter \"timeInterval\" value = grid_consumed_value + self_consumed_value
+        value = thermal_value + other_value
+      example:
+        units: kW
+        value: 12.5
+        timestamp: 2023-01-20T00:00:00Z
+        slot_number: 2
+      properties:
+        timestamp:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: timestamp
+          type: string
+        value:
+          example: 12.5
+          format: float
+          minimum: 0
+          title: value
+          type: number
+        units:
+          $ref: '#/components/schemas/PowerUnits'
+        slot_number:
+          example: 2
+          format: int64
+          minimum: 1
+          title: slot_number
+          type: number
+      required:
+      - slot_number
+      - timestamp
+      - units
+      - value
+      title: PowerMetric
+      type: object
+    PowerMetrics:
+      example:
+        user_id: userId1
+        metrics:
+        - units: kW
+          value: 12.5
+          timestamp: 2023-01-20T00:00:00Z
+          slot_number: 2
+        - units: kW
+          value: 12.5
+          timestamp: 2023-01-20T00:00:00Z
+          slot_number: 2
+      properties:
+        user_id:
+          example: userId1
+          maxLength: 10
+          minLength: 10
+          title: user_id
+          type: string
+        metrics:
+          items:
+            $ref: '#/components/schemas/PowerMetric'
+          title: metrics
+          type: array
+      required:
+      - metrics
+      - user_id
+      title: PowerMetrics
+      type: object
+    InstantPowerMetric:
+      example:
+        user_id: userId1
+        units: kW
+        value: 12.5
+        timestamp: 2023-01-20T00:00:00Z
+      properties:
+        user_id:
+          example: userId1
+          maxLength: 10
+          minLength: 10
+          title: user_id
+          type: string
+        timestamp:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: timestamp
+          type: string
+        value:
+          example: 12.5
+          format: float
+          minimum: 0
+          title: value
+          type: number
+        units:
+          $ref: '#/components/schemas/PowerUnits'
+      required:
+      - timestamp
+      - units
+      - user_id
+      - value
+      title: InstantPowerMetric
+      type: object
+    VoltageMetric:
+      description: \"timestamp\" and \"slotNumber\" field are incremented by the query
+        parameter \"timeInterval\"
+      example:
+        units: V
+        value: 12.5
+        timestamp: 2023-01-20T00:00:00Z
+        slot_number: 2
+      properties:
+        timestamp:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: timestamp
+          type: string
+        value:
+          example: 12.5
+          format: float
+          minimum: 0
+          title: value
+          type: number
+        units:
+          $ref: '#/components/schemas/VoltageUnits'
+        slot_number:
+          example: 2
+          format: int64
+          minimum: 1
+          title: slot_number
+          type: number
+      required:
+      - slot_number
+      - timestamp
+      - units
+      - value
+      title: VoltageMetric
+      type: object
+    VoltageMetrics:
+      example:
+        user_id: userId1
+        metrics:
+        - units: V
+          value: 12.5
+          timestamp: 2023-01-20T00:00:00Z
+          slot_number: 2
+        - units: V
+          value: 12.5
+          timestamp: 2023-01-20T00:00:00Z
+          slot_number: 2
+      properties:
+        user_id:
+          example: userId1
+          maxLength: 10
+          minLength: 10
+          title: user_id
+          type: string
+        metrics:
+          items:
+            $ref: '#/components/schemas/VoltageMetric'
+          title: metrics
+          type: array
+      required:
+      - metrics
+      - user_id
+      title: VoltageMetrics
+      type: object
+    InstantVoltageMetric:
+      example:
+        user_id: userId1
+        units: V
+        value: 12.5
+        timestamp: 2023-01-20T00:00:00Z
+      properties:
+        user_id:
+          example: userId1
+          maxLength: 10
+          minLength: 10
+          title: user_id
+          type: string
+        timestamp:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: timestamp
+          type: string
+        value:
+          example: 12.5
+          format: float
+          minimum: 0
+          title: value
+          type: number
+        units:
+          $ref: '#/components/schemas/VoltageUnits'
+      required:
+      - timestamp
+      - units
+      - user_id
+      - value
+      title: InstantVoltageMetric
+      type: object
+    EnergyTimeSeries:
+      description: "Array of energy consumption metrics grouped by <group_by>. The\
+        \ real energy consumption, measured by houses with dongles"
+      example:
+        units: kWh
+        timestamp: 2023-01-20T00:00:00Z
+        energy: 12.5
+        slot_number: 2
+      properties:
+        timestamp:
+          example: 2023-01-20T00:00:00Z
+          format: date-time
+          title: timestamp
+          type: string
+        energy:
+          example: 12.5
+          format: float
+          minimum: 0
+          title: value
+          type: number
+        units:
+          $ref: '#/components/schemas/EnergyUnits'
+        slot_number:
+          example: 2
+          format: int64
+          minimum: 1
+          title: slot_number
+          type: number
+      title: EnergyTimeSeries
+      type: object
+    ForecastVsReal:
+      example:
+        user_id: userId1
+        forecast:
+        - units: kWh
+          timestamp: 2023-01-20T00:00:00Z
+          energy: 12.5
+          slot_number: 2
+        - units: kWh
+          timestamp: 2023-01-20T00:00:00Z
+          energy: 12.5
+          slot_number: 2
+        real:
+        - units: kWh
+          timestamp: 2023-01-20T00:00:00Z
+          energy: 12.5
+          slot_number: 2
+        - units: kWh
+          timestamp: 2023-01-20T00:00:00Z
+          energy: 12.5
+          slot_number: 2
+      properties:
+        user_id:
+          example: userId1
+          maxLength: 10
+          minLength: 10
+          title: user_id
+          type: string
+        forecast:
+          items:
+            $ref: '#/components/schemas/EnergyTimeSeries'
+          title: forecast
+          type: array
+        real:
+          items:
+            $ref: '#/components/schemas/EnergyTimeSeries'
+          title: real
+          type: array
+      required:
+      - real
+      - user_id
+      title: ForecastVsReal
+      type: object
+    Error:
+      description: Error model
+      example:
+        error: error
+      properties:
+        error:
+          title: error
+          type: string
+      required:
+      - error
+      title: Error
+      type: object
+  securitySchemes:
+    Bearer:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+      x-bearerInfoFunc: statistics_manager_service.controllers.security_controller.info_from_Bearer

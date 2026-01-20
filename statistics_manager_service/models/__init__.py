@@ -1,0 +1,19 @@
+# flake8: noqa
+# import models into model package
+from statistics_manager_service.models.co2_forecast import CO2Forecast
+from statistics_manager_service.models.co2_units import CO2Units
+from statistics_manager_service.models.energy_metric import EnergyMetric
+from statistics_manager_service.models.energy_metrics import EnergyMetrics
+from statistics_manager_service.models.energy_time_series import EnergyTimeSeries
+from statistics_manager_service.models.energy_units import EnergyUnits
+from statistics_manager_service.models.error import Error
+from statistics_manager_service.models.forecast_vs_real import ForecastVsReal
+from statistics_manager_service.models.instant_energy_metric import InstantEnergyMetric
+from statistics_manager_service.models.instant_power_metric import InstantPowerMetric
+from statistics_manager_service.models.instant_voltage_metric import InstantVoltageMetric
+from statistics_manager_service.models.power_metric import PowerMetric
+from statistics_manager_service.models.power_metrics import PowerMetrics
+from statistics_manager_service.models.power_units import PowerUnits
+from statistics_manager_service.models.voltage_metric import VoltageMetric
+from statistics_manager_service.models.voltage_metrics import VoltageMetrics
+from statistics_manager_service.models.voltage_units import VoltageUnits
